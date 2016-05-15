@@ -22,7 +22,7 @@ begin
 		end
 		3'b 101: S = ({F[6:0],F[7]}) ; // Rotate left
 		3'b 110: S = ({F[0],F[7:1]}) ; // Rotate right
-		3'b 111:                       // Rotate right with carry. Save the fallen MSB in Carry_Out and place Carry_In in LSB 
+		3'b 111:                       // Rotate right with carry. Save the fallen MSB in Carry_Out and place Carry_In in LSB. DONE PROCESS
 		begin
 			S = ({CI,F[7:1]});
 			CO = F[0];
