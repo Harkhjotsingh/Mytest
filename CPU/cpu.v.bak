@@ -1,0 +1,304 @@
+module CPU (CLK,DATA_I,DATA_O,DEBUG);
+input CLK;
+input [7:0] DATA_I;
+output [7:0] DATA_O;
+output [15:0] DEBUG;
+
+reg [7:0] DATA_O;
+reg [15:0] DEBUG;
+reg Z,S,C,V;
+reg [7:0] CAR;                             // control address register
+reg  [16:0] ControlWord;
+
+  wire [29:0]  DATA_out;
+   wire [ 2:0]  ASEL;
+   wire [ 2:0]  BSEL;
+   wire [ 2:0]  DSEL;
+   wire [ 3:0]  SSEL;
+   wire [ 2:0]  HSEL;
+   wire         MUX1;
+   wire [ 2:0]  MUX2;
+   wire [ 5:0]  ADRS;
+   wire [ 3:0]  MISC;
+
+
+   assign                 ASEL = DATA_out[29:27];    // bit size:3
+   assign                 BSEL = DATA_out[26:24];    // bit size:3
+   assign                 DSEL = DATA_out[23:21];    // bit size:3
+   assign                 SSEL = DATA_out[20:17];    // bit size:4
+   assign                 HSEL = DATA_out[16:14];    // bit size:3
+   assign                 MUX1 = DATA_out[13];       // bit size:1
+   assign                 MUX2 = DATA_out[12:10];    // bit size:3
+   assign                 ADRS = DATA_out[ 9: 4];    // bit size:6
+   assign                 MISC = DATA_out[ 3: 0];    // bit size:4
+
+
+
+ REGFILE inst_3 ( .DIN(DATA_I), .RIN(DATA_I), .ASEL(ASEL), .BSEL(BSEL), .DSEL(DSEL), .A(DATA_O) .B(DATA_O), .CLK(CLK)  ); // REGFILE 
+ALU inst_1 (.A(DATA_I), .B(DATA_I), .F(DATA_O), .SSEL(SSEL), .Z(Z), .S(S) ,.C(C),.V(V)); // ALU 
+SHIFTER inst_2 ( .HSEL(HSEL), .F(DATA_I), .S(DATA_O), ); // SHIFTER 
+
+
+always@(posedge CLK )
+begin
+
+case(SSEL)
+
+	4'b0000: 
+		begin
+		end 
+
+	4'b0001:
+		begin
+		if (F==0)
+			Z=1;
+		else
+			Z=0;
+		if (F[7]=1)
+			S=1;
+		else 
+			S=0;
+		end 
+
+	4'b0010:
+	begin
+		if (F==0)
+			Z=1;
+		else
+			Z=0;
+		if (F[7]=1)
+			S=1;
+		else 
+			S=0;
+		end 
+		if ((A[7] && B[7]))
+			C=1;
+		else 
+			C=0;
+		if (A[7] == B[7])
+			if (A[7] == F[7])
+				V = 0;
+			else 
+				V = 1;
+		else 
+           V = 0;
+     end 
+
+	4'b0101:
+	begin
+		if (F==0)
+				Z=1;
+			else
+				Z=0;
+			if (F[7]=1)
+				S=1;
+			else 
+				S=0;
+			end 
+			if ((A[7] > B[7]))
+				C=1;
+			else 
+				C=0;
+			if (A[7] == F[7])
+				 if (A[7] == ~B[7])	 
+					V=0;
+				 else 
+					V=1;
+				else 
+					V=0;
+	end 
+
+	
+	4'b0110:
+
+	 begin 
+	 begin
+		if (F==0)
+			Z=1;
+		else
+			Z=0;
+		if (F[7]=1)
+			S=1;
+		else 
+			S=0;
+	 end 
+
+	4'b0111:
+	begin
+		if (F==0)
+			Z=1;
+		else
+			Z=0;
+		if (F[7]=1)
+			S=1;
+		else 
+			S=0;
+		C=0;
+	end 
+
+	4'b1000:
+	 
+		begin
+			if (F==0)
+				Z=1;
+			else
+				Z=0;
+			if (F[7]=1)
+				S=1;
+			else 
+				S=0;
+			end 
+
+	4'b1010:
+	
+		begin
+			if (F==0)
+				Z=1;
+			else
+				Z=0;
+			if (F[7]=1)
+				S=1;
+			else 
+				S=0;
+		end 
+	
+	4'b1100:
+	begin 
+		begin
+			if (F==0)
+				Z=1;
+			else
+				Z=0;
+			if (F[7]=1)
+				S=1;
+			else 
+				S=0;
+		end 
+
+	4'b1110:
+
+	begin 
+		begin
+			if (F==0)
+				Z=1;
+			else
+				Z=0;
+			if (F[7]=1)
+				S=1;
+			else 
+				S=0;
+		end 
+endcase;
+end 
+
+	
+always@(posedge CLK )
+begin
+
+
+case (HSEL)
+
+4'b100:
+	begin
+		if(A[7] == 1) 
+			C=1;
+		else 
+			C=0;
+	end
+
+4'b111:
+	begin 
+
+		if(A[0] == 1) 
+			C=1;
+		else 
+			C=0;
+	end 
+
+	endcase;
+	end 
+
+endcase;
+end
+
+
+
+
+
+
+always@(posedge CLK)
+begin 
+
+
+case MUX1
+
+1'b0: ADDR_in=ADRS;
+
+1'b1: ADDR_in=00;//external address;
+
+endcase;
+
+
+case MUX2
+
+4'b000 : CAR=CAR+1; 						//Go to next address by incrementing CAR
+4'b001 : CAR=ADDR_in;					//Load address into CAR (Branch)
+
+4'b010 : 								//  Load on Carry = 1	
+
+	begin 
+        if (C=1)
+        	CAR=ADDR_in ;
+        else 
+        	CAR=CAR;   
+    end 
+
+4'b011 : 								//Load on Carry = 0
+	
+	begin 
+        if (C=0)
+        	CAR=ADDR_in ;
+        else 
+        	CAR=CAR;   
+    end 	
+
+4'b100 : 								//Load on Zero = 1
+	
+	begin 
+        if (Z=1)
+        	CAR=ADDR_in ;
+        else 
+        	CAR=CAR;   
+    end 	
+
+4'b101 :								//Load on Zero = 0
+	
+	begin 
+        if (C=0)
+        	CAR=ADDR_in ;
+        else 
+        	CAR=CAR;   
+    end  	
+
+4'b110 : 								//Load on Sign = 1
+	begin 
+        if (S=1)
+        	CAR=ADDR_in ; 
+        else 
+        	CAR=CAR;  
+    end 	
+
+
+4'b111 :                                // Load on Overflow = 1 
+	begin 
+        if (V=1)
+        	CAR=ADDR_in ; 
+        else 
+        	CAR=CAR; 
+    end 	
+
+endcase;
+end
+
+
+
